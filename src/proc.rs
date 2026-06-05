@@ -32,7 +32,7 @@ pub enum State {
 }
 
 
-fn get_tcp_ports() -> anyhow::Result<Vec<TcpPorts>> {
+pub fn get_tcp_ports() -> Result<Vec<TcpPorts>> {
     let content = fs::read_to_string("/proc/net/tcp")?;
     let inode_map = build_pid_inode_map().unwrap();
     let mut entries: Vec<TcpPorts> = vec![];
@@ -67,7 +67,7 @@ fn get_tcp_ports() -> anyhow::Result<Vec<TcpPorts>> {
     Ok(entries)
 }
 
-fn build_pid_inode_map() -> anyhow::Result<HashMap<u64, u32>> {
+fn build_pid_inode_map() -> Result<HashMap<u64, u32>> {
     let mut map = HashMap::new();
 
     for entry in fs::read_dir("/proc")? {

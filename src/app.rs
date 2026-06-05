@@ -19,7 +19,7 @@ pub struct App {
 impl App {
     pub fn new() -> Self{
         let mut table_state = TableState::default();
-        table_state.select(Some((0)));
+        table_state.select(Some(0));
 
         Self {
             ports: vec![],

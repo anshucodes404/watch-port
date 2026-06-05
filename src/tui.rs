@@ -1,12 +1,12 @@
 use anyhow::Result;
 use crossterm::{
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, emable_raw_mode, enable_raw_mode},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{Terminal, backend::CrosstermBackend, terminal};
-use std::io::{self, stdout};
+use std::io::{self, Stdout};
 
-pub type Tui = Terminal<CrosstermBackend<stdout>>;
+pub type Tui = Terminal<CrosstermBackend<Stdout>>;
 
 pub fn setup() -> Result<Tui> {
     enable_raw_mode()?;

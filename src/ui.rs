@@ -64,7 +64,6 @@ fn render_table(frame: &mut Frame, app: &mut App, area: Rect) {
 
     // the rows are filtered which are not having any pid, so make it toggle with a key press to see all the acquired ports, that dont have a pid or process name
 
-    
     let rows: Vec<Row> = app
         .ports
         .iter()
@@ -75,9 +74,9 @@ fn render_table(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let widths = [
         Constraint::Length(3),
-        Constraint::Length(16),
-        Constraint::Length(16),
-        Constraint::Length(10),
+        Constraint::Length(20),
+        Constraint::Length(20),
+        Constraint::Length(7),
         Constraint::Length(14),
         Constraint::Length(5),
         Constraint::Min(0),

@@ -1,11 +1,13 @@
 use crate::proc::{State, TcpPorts};
 // use color_eyre::eyre::Ok;
+use nix::sys::signal::{Signal, kill};
+use nix::unistd::Pid;
 use ratatui::widgets::TableState;
 
 #[derive(Debug, PartialEq)]
 pub enum AppMode {
     NORMAL,
-    CONFORMING { port_idx: usize },
+    CONFORMING { pid: u32, name: String },
 }
 
 pub struct App {
@@ -95,35 +97,35 @@ impl App {
     // killing a process
 
     pub fn enter_kill_confirm(&mut self) {
-        if let Some(i) = self.table_state.selected() {
-            if i < self.ports.len() {
-                self.mode = AppMode::CONFORMING { port_idx: i }
+        if let Some(port) = self.selected_port() {
+            if let Some(pid) = port.pid {
+                self.mode = AppMode::CONFORMING {
+                    pid,
+                    name: port.name.clone().unwrap_or("?".into()),
+                }
             }
         }
     }
 
     pub fn confirm_kill(&mut self) {
-        if let AppMode::CONFORMING { port_idx } = self.mode {
-            if let Some(port) = self.ports.get(port_idx) {
-                match port.pid {
-                    Some(pid) => {
-                        let res = kill_process(pid);
-                        self.last_action_msg = Some(match res {
-                            Ok(_) => format!(
-                                " Sent SIGTERM to {} (pid{})",
-                                port.name.as_deref().unwrap_or("?"),
-                                pid
-                            ),
-                            Err(e) => format!(" Kill failed: {e}"),
-                        });
-                    }
-                    None => {
-                        self.last_action_msg =
-                            Some(" Cannot kill: PID unknown (try running with sudo)".into());
-                    }
+        if let AppMode::CONFORMING { pid, ref name } = self.mode {
+            let res = kill_process(pid, Signal::SIGTERM);
+            // let res = kill_process(pid, Signal::SIGKILL); used for force kill
+
+            match res {
+                Ok(_) => {
+                    self.last_action_msg = Some(format!("Sent SIGTERM to {} (pid {})", name, pid));
+
+                    // Refresh your ports here
+                    // self.refresh_ports();
+                }
+
+                Err(e) => {
+                    self.last_action_msg = Some(format!("Kill failed: {e}"));
                 }
             }
         }
+
         self.mode = AppMode::NORMAL;
     }
 
@@ -137,27 +139,35 @@ impl App {
         self.table_state.selected().and_then(|i| self.ports.get(i))
     }
 
-    pub fn kill_target(&self) -> Option<&TcpPorts> {
-        if let AppMode::CONFORMING { port_idx } = self.mode {
-            self.ports.get(port_idx)
-        } else {
-            None
-        }
-    }
+    // pub fn kill_target(&self) -> Option<&TcpPorts> {
+    //     if let AppMode::CONFORMING { port_idx } = self.mode {
+    //         self.ports.get(port_idx)
+    //     } else {
+    //         None
+    //     }
+    // }
 }
 
-fn kill_process(pid: u32) -> Result<(), String> {
-    let result = unsafe { libc::kill(pid as libc::pid_t, libc::SIGTERM) };
-
-    if result == 0 {
-        Ok(())
-    } else {
-        let errno = unsafe { *libc::__errno_location() };
-        let msg = match errno {
-            libc::EPERM => "permission denied (try sudo)".to_string(),
-            libc::ESRCH => "process not found (already exited?)".to_string(),
-            _ => format!("errno {errno}"),
-        };
-        Err(msg)
-    }
+fn kill_process(pid: u32, signal: Signal) -> Result<(), String> {
+    kill(Pid::from_raw(pid as i32), signal).map_err(|e| match e {
+        nix::errno::Errno::EPERM => "Permission denied (try sudo)".into(),
+        nix::errno::Errno::ESRCH => "Process not found".into(),
+        _ => e.to_string(),
+    })
 }
+
+// fn kill_process(pid: u32) -> Result<(), String> {
+//     let result = unsafe { libc::kill(pid as libc::pid_t, libc::SIGTERM) };
+
+//     if result == 0 {
+//         Ok(())
+//     } else {
+//         let errno = unsafe { *libc::__errno_location() };
+//         let msg = match errno {
+//             libc::EPERM => "permission denied (try sudo)".to_string(),
+//             libc::ESRCH => "process not found (already exited?)".to_string(),
+//             _ => format!("errno {errno}"),
+//         };
+//         Err(msg)
+//     }
+// }

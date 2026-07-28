@@ -16,6 +16,7 @@ enum Message {
 }
 
 fn main() -> Result<()> {
+    // initial setup of the UI and then passing the Result<Tui> to Guard for implemeting Drop on it
     let mut guard = tui::TerminalGuard(tui::setup()?);
 
     let (tx, rx) = mpsc::channel::<Message>();
@@ -68,18 +69,17 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-
 fn handle_key(app: &mut App, key: KeyCode) {
     match key {
         KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => {
             app.should_quit = true;
         }
- 
+
         // Navigation
-        KeyCode::Down  | KeyCode::Char('j') => app.select_next(),
-        KeyCode::Up    | KeyCode::Char('k') => app.select_prev(),
-        KeyCode::Home  | KeyCode::Char('g') => app.select_first(),
-        KeyCode::End   | KeyCode::Char('G') => app.select_last(),
+        KeyCode::Down | KeyCode::Char('j') => app.select_next(),
+        KeyCode::Up | KeyCode::Char('k') => app.select_prev(),
+        KeyCode::Home | KeyCode::Char('g') => app.select_first(),
+        KeyCode::End | KeyCode::Char('G') => app.select_last(),
 
         KeyCode::Char('K') => {
             if let Some(port) = app.selected_port() {
@@ -90,7 +90,7 @@ fn handle_key(app: &mut App, key: KeyCode) {
                 );
             }
         }
- 
+
         _ => {}
     }
 }

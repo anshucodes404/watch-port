@@ -1,10 +1,10 @@
-
 use crate::app::App;
 use crate::proc::State;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style, Stylize},
+    // style::{Color, Modifier, Style, Stylize},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Cell, HighlightSpacing, Paragraph, Row, Table},
 };
@@ -51,20 +51,33 @@ fn render_title(frame: &mut Frame, app: &mut App, area: Rect) {
 
 fn render_table(frame: &mut Frame, app: &mut App, area: Rect) {
     let header = Row::new(vec![
-        Cell::from("PORT").style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from("SL.").style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from("LOCAL_ADD").style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from("REMOTE_ADD").style(Style::default().add_modifier(Modifier::BOLD)),
         Cell::from("PROTOCOL").style(Style::default().add_modifier(Modifier::BOLD)),
         Cell::from("STATE").style(Style::default().add_modifier(Modifier::BOLD)),
         Cell::from("PID").style(Style::default().add_modifier(Modifier::BOLD)),
         Cell::from("PROCESS").style(Style::default().add_modifier(Modifier::BOLD)),
     ])
-    .style(Style::default().bg(Color::DarkGray))
-    .height(1);
+    .style(Style::default().bg(Color::Rgb(50, 50, 50)))
+    .height(2);
 
-    let rows: Vec<Row> = app.ports.iter().map(port_to_row).collect();
+    // the rows are filtered which are not having any pid, so make it toggle with a key press to see all the acquired ports, that dont have a pid or process name
+
+    
+    let rows: Vec<Row> = app
+        .ports
+        .iter()
+        .filter(|p| p.pid.is_some())
+        .enumerate()
+        .map(|(i, port)| port_to_row(i, port))
+        .collect();
 
     let widths = [
-        Constraint::Length(7),
-        Constraint::Length(6),
+        Constraint::Length(3),
+        Constraint::Length(16),
+        Constraint::Length(16),
+        Constraint::Length(10),
         Constraint::Length(14),
         Constraint::Length(5),
         Constraint::Min(0),
@@ -79,7 +92,7 @@ fn render_table(frame: &mut Frame, app: &mut App, area: Rect) {
         )
         .highlight_style(
             Style::default()
-                .bg(Color::DarkGray)
+                .bg(Color::Rgb(40, 40, 40))
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("▶ ")
@@ -88,7 +101,7 @@ fn render_table(frame: &mut Frame, app: &mut App, area: Rect) {
     frame.render_stateful_widget(table, area, &mut app.table_state);
 }
 
-fn port_to_row(port: &crate::proc::TcpPorts) -> Row {
+fn port_to_row(sl_no: usize, port: &crate::proc::TcpPorts) -> Row<'_> {
     // Color the state cell based on value
     let (state_str, state_color) = match &port.state {
         State::Listen => ("LISTEN", Color::Green),
@@ -106,13 +119,17 @@ fn port_to_row(port: &crate::proc::TcpPorts) -> Row {
     };
 
     let pid_str = port.pid.map(|p| p.to_string()).unwrap_or("-".into());
+
+    // remove the processes having "?" name or no name
     let name_str = port.name.clone().unwrap_or("?".into());
     let proto_str = match port.protocol {
         crate::proc::Protocol::TCP => "TCP",
     };
 
     Row::new(vec![
-        Cell::from(port.port.to_string()),
+        Cell::from(sl_no.to_string()),
+        Cell::from(port.local_add.to_string()),
+        Cell::from(port.remote_add.to_string()),
         Cell::from(proto_str),
         Cell::from(state_str).style(Style::default().fg(state_color)),
         Cell::from(pid_str),

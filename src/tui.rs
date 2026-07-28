@@ -3,15 +3,18 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{Terminal, backend::CrosstermBackend, terminal};
+// use ratatui::{Terminal, backend::CrosstermBackend, terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io::{self, Stdout};
 
 pub type Tui = Terminal<CrosstermBackend<Stdout>>;
 
+// initialising the ratatui with crossterm backend
 pub fn setup() -> Result<Tui> {
     enable_raw_mode()?;
     execute!(io::stdout(), EnterAlternateScreen)?;
-    let terminal: Terminal<CrosstermBackend<io::Stdout>> = Terminal::new(CrosstermBackend::new(io::stdout()))?;
+    let terminal: Terminal<CrosstermBackend<io::Stdout>> =
+        Terminal::new(CrosstermBackend::new(io::stdout()))?;
     Ok(terminal)
 }
 
@@ -20,14 +23,13 @@ pub fn teardown(terminal: &mut Tui) -> Result<()> {
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
     Ok(())
-} 
-
+}
 
 // i have used this for, even if main paincs teardown will absolutely run
 pub struct TerminalGuard(pub Tui);
 
 impl Drop for TerminalGuard {
-    fn drop(&mut self){
+    fn drop(&mut self) {
         let _ = teardown(&mut self.0);
     }
 }

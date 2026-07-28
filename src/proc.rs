@@ -1,9 +1,10 @@
 use anyhow::Result;
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, net::Ipv4Addr};
 
 #[derive(Debug, Clone)]
 pub struct TcpPorts {
-    pub port: u16,
+    pub local_add: String,
+    pub remote_add: String,
     pub protocol: Protocol,
     pub state: State,
     pub pid: Option<u32>,
@@ -31,7 +32,6 @@ pub enum State {
     Unknown(String),
 }
 
-
 pub fn get_tcp_ports() -> Result<Vec<TcpPorts>> {
     let content = fs::read_to_string("/proc/net/tcp")?;
     let inode_map = build_pid_inode_map().unwrap();
@@ -44,18 +44,27 @@ pub fn get_tcp_ports() -> Result<Vec<TcpPorts>> {
             continue;
         }
 
-        let loc_add = cols[1];
         let state_hex = cols[3];
         let inode = cols[9].parse::<u64>().unwrap_or(0);
 
-        let port = parse_port(loc_add);
+        let local_add = match decode_address(cols[1]) {
+            Some(str) => str,
+            None => "No Port".into(),
+        };
+
+        let remote_add = match decode_address(cols[2]) {
+            Some(str) => str,
+            None => "No Port".into(),
+        };
+
         let state = parse_state(state_hex);
 
         let pid = inode_map.get(&inode).copied();
         let name = pid.and_then(|p| get_process_name(p).ok());
 
         entries.push(TcpPorts {
-            port,
+            local_add,
+            remote_add,
             protocol: Protocol::TCP,
             state,
             pid,
@@ -63,7 +72,13 @@ pub fn get_tcp_ports() -> Result<Vec<TcpPorts>> {
         });
     }
 
-    entries.sort_by_key(|e| e.port);
+    entries.sort_by_key(|e| {
+        e.local_add
+            .split(":")
+            .nth(1)
+            .and_then(|p| p.parse::<u16>().ok())
+            .unwrap_or(0)
+    });
     Ok(entries)
 }
 
@@ -117,12 +132,22 @@ fn get_process_name(pid: u32) -> anyhow::Result<String> {
     Ok(name)
 }
 
-fn parse_port(loc_add: &str) -> u16 {
-    let parts: Vec<&str> = loc_add.split(":").collect();
-    if parts.len() != 2 {
-        return 0;
-    }
-    u16::from_str_radix(parts[1], 16).unwrap_or(0)
+// fn parse_port(loc_add: &str) -> u16 {
+//     let parts: Vec<&str> = loc_add.split(":").collect();
+//     if parts.len() != 2 {
+//         return 0;
+//     }
+//     u16::from_str_radix(parts[1], 16).unwrap_or(0)
+// }
+
+fn decode_address(addr: &str) -> Option<String> {
+    let (ip_hex, port_hex) = addr.split_once(':')?;
+
+    let ip = u32::from_str_radix(ip_hex, 16).ok()?;
+    let port = u16::from_str_radix(port_hex, 16).ok()?;
+    let ip = Ipv4Addr::from(u32::from_be(ip));
+
+    Some(format!("{}:{}", ip, port))
 }
 
 fn parse_state(state_hex: &str) -> State {

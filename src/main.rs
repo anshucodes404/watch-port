@@ -82,13 +82,7 @@ fn handle_key(app: &mut App, key: KeyCode) {
         KeyCode::End | KeyCode::Char('G') => app.select_last(),
 
         KeyCode::Char('K') => {
-            if let Some(port) = app.selected_port() {
-                app.status_msg = format!(
-                    "  Kill stub: would kill {} (pid {:?}) — confirmation coming in week 3",
-                    port.name.as_deref().unwrap_or("?"),
-                    port.pid,
-                );
-            }
+            app.enter_kill_confirm();
         }
 
         _ => {}

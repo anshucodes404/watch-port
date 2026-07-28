@@ -2,12 +2,34 @@ use crate::app::App;
 use crate::proc::State;
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Flex, Layout, Rect},
     // style::{Color, Modifier, Style, Stylize},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Cell, HighlightSpacing, Paragraph, Row, Table},
+    widgets::{Block, Borders, Cell, Clear, HighlightSpacing, Paragraph, Row, Table},
 };
+
+fn center_area(x_percent: u16, y_percent: u16, area: Rect) -> Rect {
+    let vert = Layout::vertical([
+        Constraint::Percentage((100 - y_percent) / 2),
+        Constraint::Percentage(y_percent),
+        Constraint::Percentage((100 - y_percent) / 2),
+    ])
+    .flex(Flex::Center);
+
+    let [_, middle, _] = vert.areas(area);
+
+    let horizontal = Layout::horizontal([
+        Constraint::Percentage((100 - x_percent) / 2),
+        Constraint::Percentage(x_percent),
+        Constraint::Percentage((100 - x_percent) / 2),
+    ])
+    .flex(Flex::Center);
+
+    let [_, center, _] = horizontal.areas(middle);
+
+    center
+}
 
 pub fn render(frame: &mut Frame, app: &mut App) {
     let areas = Layout::default()
@@ -156,4 +178,12 @@ fn render_status(frame: &mut Frame, app: &mut App, area: Rect) {
         .block(Block::default().borders(Borders::ALL));
 
     frame.render_widget(status, area);
+}
+
+fn render_kill_popup(frame: &mut Frame, app: &mut App) {
+    let area = center_area(50, 20, frame.size());
+
+    frame.render_widget(Clear, area);
+
+    // let port = app.k
 }

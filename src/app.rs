@@ -1,4 +1,4 @@
-use crate::proc::{State, TcpPorts};
+use crate::proc::TcpPorts;
 // use color_eyre::eyre::Ok;
 use nix::sys::signal::{Signal, kill};
 use nix::unistd::Pid;
@@ -102,7 +102,7 @@ impl App {
                 self.mode = AppMode::CONFORMING {
                     pid,
                     name: port.name.clone().unwrap_or("?".into()),
-                }
+                };
             }
         }
     }
@@ -110,7 +110,7 @@ impl App {
     pub fn confirm_kill(&mut self) {
         if let AppMode::CONFORMING { pid, ref name } = self.mode {
             let res = kill_process(pid, Signal::SIGTERM);
-            // let res = kill_process(pid, Signal::SIGKILL); used for force kill
+            // let res = kill_process(pid, Signal::SIGKILL); use for force kill
 
             match res {
                 Ok(_) => {

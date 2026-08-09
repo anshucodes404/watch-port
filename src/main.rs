@@ -72,16 +72,35 @@ fn main() -> Result<()> {
 fn handle_key(app: &mut App, key: KeyCode) {
     match key {
         KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => {
-            app.should_quit = true;
+            // If in confirmation mode and Esc is pressed, cancel kill
+            if matches!(app.mode, app::AppMode::CONFORMING { .. }) {
+                app.cancel_kill();
+            } else {
+                app.should_quit = true;
+            }
         }
 
-        // Navigation
-        KeyCode::Down | KeyCode::Char('j') => app.select_next(),
-        KeyCode::Up | KeyCode::Char('k') => app.select_prev(),
-        KeyCode::Home | KeyCode::Char('g') => app.select_first(),
-        KeyCode::End | KeyCode::Char('G') => app.select_last(),
+        // In CONFORMING mode, handle Y/N keys
+        KeyCode::Char('y') | KeyCode::Char('Y') => {
+            if matches!(app.mode, app::AppMode::CONFORMING { .. }) {
+                app.confirm_kill();
+            }
+        }
 
-        KeyCode::Char('K') => {
+        KeyCode::Char('n') | KeyCode::Char('N') => {
+            if matches!(app.mode, app::AppMode::CONFORMING { .. }) {
+                app.cancel_kill();
+            }
+        }
+
+        // Navigation (only in normal mode)
+        KeyCode::Down | KeyCode::Char('j') if matches!(app.mode, app::AppMode::NORMAL) => app.select_next(),
+        KeyCode::Up | KeyCode::Char('k') if matches!(app.mode, app::AppMode::NORMAL) => app.select_prev(),
+        KeyCode::Home | KeyCode::Char('g') if matches!(app.mode, app::AppMode::NORMAL) => app.select_first(),
+        KeyCode::End | KeyCode::Char('G') if matches!(app.mode, app::AppMode::NORMAL) => app.select_last(),
+
+        // Enter kill confirmation mode (only in normal mode)
+        KeyCode::Char('K') if matches!(app.mode, app::AppMode::NORMAL) => {
             app.enter_kill_confirm();
         }
 

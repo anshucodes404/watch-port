@@ -2,7 +2,7 @@ use crate::app::App;
 use crate::proc::State;
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Flex, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
     // style::{Color, Modifier, Style, Stylize},
     style::{Color, Modifier, Style},
     text::{Line, Span},
@@ -46,6 +46,11 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     render_table(frame, app, areas[1]);
 
     render_status(frame, app, areas[2]);
+
+    // Render kill confirmation popup if in CONFORMING mode
+    if matches!(app.mode, crate::app::AppMode::CONFORMING { .. }) {
+        render_kill_popup(frame, app);
+    }
 }
 
 fn render_title(frame: &mut Frame, app: &mut App, area: Rect) {
@@ -181,9 +186,39 @@ fn render_status(frame: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn render_kill_popup(frame: &mut Frame, app: &mut App) {
-    let area = center_area(50, 20, frame.size());
+    let area = center_area(60, 25, frame.size());
 
+    // Draw background
     frame.render_widget(Clear, area);
 
-    // let port = app.k
+    // Extract kill target info
+    if let crate::app::AppMode::CONFORMING { pid, ref name } = app.mode {
+        // Create the confirmation message
+        let message = Line::from(vec![
+            Span::raw("Kill process: "),
+            Span::styled(
+                format!("{} (pid {})", name, pid),
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("?"),
+        ]);
+
+        let hint = Line::from(vec![
+            Span::styled("Y", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::raw(" - Confirm  |  "),
+            Span::styled("N", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+            Span::raw(" - Cancel  |  "),
+            Span::styled("Esc", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::raw(" - Cancel"),
+        ]);
+
+        let title_text = vec![message, Line::from(""), hint];
+
+        let title = Paragraph::new(title_text)
+            .style(Style::default().fg(Color::White))
+            .block(Block::default().borders(Borders::ALL).title(" Kill Confirmation "))
+            .alignment(Alignment::Center);
+
+        frame.render_widget(title, area);
+    }
 }
